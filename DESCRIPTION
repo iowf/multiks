@@ -1,11 +1,14 @@
 Package: multiks
-Title: What the Package Does (One Line, Title Case)
+Title: Kolmogorov-Smirnov Tests for Two or More Samples
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+    person("Ian", "Farm", , "ian.farm@maine.edu", role = c("aut", "cre"))
+Description: An implementation of Walter Böhm and Kurt Hornik's 
+    two-or-more-sample Kolmogorov-Smirnov test (Böhm, W., & Hornik, K. (2010). A
+    Kolmogorov-Smirnov Test for r Samples. Research Report Series / Department 
+    of Statistics and Mathematics No. 105 
+    https://doi.org/10.57938/2d4c243c-f18c-450e-8d1d-d0a69ff1fe52).
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
