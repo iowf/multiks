@@ -18,8 +18,10 @@ ks.rsample.default <- function(
   x,
   exact = NULL,
   simulate.p.value = FALSE,
-  B = 2e3
+  B = 2e3,
+  ...
 ) {
+  data_name <- deparse1(substitute(x))
 
   # input validation
   if (is.list(x)) {
@@ -38,44 +40,92 @@ ks.rsample.default <- function(
   if (length(n) > 1) stop("All samples must be of the same size")
   if (n < 1) stop("Not enough 'x' values")
 
-  k <- maxdist(x, r)
+  k <- max_dist(x, r)
   D <- k / n
 
   method <-
     if ((r * k)^r < 1e4) "Exact"
     else if (simulate.p.value) "Monte-Carlo"
     else "Approximate"
-
   if (method == "Approximate" && n < 10) warning("Approximate p-value may be innaccurate for small sample sizes")
 
   P <- switch(method,
-    "approximate" = p_ks_approx(r, n, k),
-    "exact" = p_ks_exact(r, n, k),
-    "simulated" = p_ks_sim(r, n, k, B)
+    "Exact" = p_rks_exact(r, n, k),
+    "Monte-Carlo" = p_rks_sim(r, n, k, B),
+    "Approximate" = p_rks_approx(r, n, k),
   )
 
   structure(
     list(
       statistic = D,
       p.value = P,
-      method = paste(method, "r-sample Kolmogorov-Smirnov test")
+      method = paste(method, "r-sample Kolmogorov-Smirnov test"),
+      data.name = data_name
     ),
     class = c("ks.rsample", "ks.test", "htest")
   )
 }
 
-maxdist <- function(x) {
+max_dist <- function(x) {
   stopifnot(is.list(x))
   stopifnot(all(vapply(x, is.numeric, logical(1L))))
   r <- length(x)
-  N <- vapply(x, length, integer(1L))
-  n <- unique(N)
+  n <- vapply(x, length, integer(1L)) |> unique(N)
   stopifnot(length(n) == 1L)
 
-  samples <- rep(1L:r, each = n) |> unlist()
-  ascending <- samples[order(unlist(x))]
+  samp_nums <- rep(1L:r, each = n) |> unlist()
+  ascending <- samp_nums[order(unlist(x))]
+  max_dist_tight(ascending, r)
+}
+max_dist_tight <- function(ascending, r) {
   lattice <- outer(ascending, 1L:r, `==`) |> apply(2L, cumsum)
   circdiffs <- lapply(1L:r, \(i) lattice[, i] - lattice[, i %% r + 1L]) |>
     do.call(cbind, args = _)
   max(circdiffs)
+}
+
+p_rks_exact <- function(r, n, k) {
+  # each row is one combination of the summation indices v1, ..., vr
+  vv <- expand.grid(
+    rep(list(1:(r*k) - 1), r)
+  ) |> as.matrix()
+  # remove unneeded indices
+  upper <- upper.tri(diag(rep(1, r)))
+  diffs <- mapply(
+    \(i, j) vv[, i] - vv[, j],
+    outer(1:r, rep(1, r))[upper],
+    outer(rep(1, r), 1:r)[upper],
+    SIMPLIFY = TRUE
+  )
+  becomes_one <- apply(diffs %% r == 0, 1, any)
+  vv <- vv[!becomes_one, ]
+  # omega
+  w <- exp((2 * pi * 1i) / (r * k))
+  # 1 - P(nD < k)
+  Pc <- (factorial(n)^r) / ((r * k)^r * factorial(n * r)) * sum(
+    rowSums(w ^ vv)^(n * r) *
+    w^(-n * rowSums(vv)) *
+    apply(vv, 1, \(v) prod(
+      1 - w^(k*outer(v, v, `-`)[upper])
+    ))
+  )
+  stopifnot(isTRUE(all.equal(Im(Pc), 0)))
+  1 - Re(Pc)
+}
+
+p_rks_sim <- function(r, n, k, B) {
+  samp_nums <- rep(1L:r, each = n) |> unlist()
+  N <- n * r
+  nge <- vapply(1:B, \(i)
+    max_dist_tight(sample(samp_nums, N), r) >= k,
+  logical(1)) |> sum()
+  (nge + 1) / (N + 1)
+}
+
+p_rks_approx <- function(r, n, k) {
+  diffs <- {mat <- outer(1:r, 1:r, `-`); mat[lower.tri(mat)]}
+  factorial(n)^r / factorial(r * n) *
+    2 ^ (r * (r - 1)) / (r * k)^(r - 1) *
+    (sin(pi / k) / sin(pi / (r * k)))^(r * n) *
+    prod(sin(pi * diffs / r)^2)
 }
