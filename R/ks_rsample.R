@@ -1,13 +1,28 @@
 #' Kolmogorov-Smirnov Tests for Two or More Equally-Sized Samples
 #'
 #' @param x a list of numeric vectors, each containing the data values for one
-#'   sample
+#'   sample; or a matrix, with each column containing the data values for one sample.
+#'   Each sample must be the same size and must not contain NAs.
+#' @param exact logical; if `TRUE`, or if `NULL` and `(r * D * n) ^ r < 1e4`,
+#'   then an exact p-value is computed; otherwise, an inexact p-value is computed
+#'   according to the setting of `simulate.p.value`. (`r` is the number of samples,
+#'   `D` is the test statistic, and `n` is the size of each sample)
+#' @param simulate.p.value logical; ignored in an exact p-value is computed. If
+#'   `TRUE`, the p-value is estimated using Monte Carlo simulation, and if `FALSE`,
+#'   using the approximation from Böhm and Hornik (2011). `FALSE` is recommended
+#'   except for small sample sizes, as the approximation is fairly good
+#'   at least down to sample
+#'   sizes of about 10.
+#' @param B integer; number of trials for the Monte Carlo p-value estimation
 #' @param ... further arguments for methods
 #'
-#' @return
+#' @return An object of class "ks.rsample".
 #' @export
 #'
 #' @examples
+#' # using a list as input:
+#' x <- list(runif(100, 0), runif(100, 0.5), rnorm(100, 1))
+#' ks.rsample(x)
 ks.rsample <- function(x, ...) {
   UseMethod("ks.rsample")
 }
@@ -22,7 +37,7 @@ ks.rsample.default <- function(
   ...
 ) {
   data_name <- deparse1(substitute(x))
-
+  browser()
   # input validation
   if (is.list(x)) {
     if (length(x) < 2) stop(sprintf("'x' has %d elements, but requires at least 2", length(x)))
@@ -40,11 +55,12 @@ ks.rsample.default <- function(
   if (length(n) > 1) stop("All samples must be of the same size")
   if (n < 1) stop("Not enough 'x' values")
 
-  k <- max_dist(x, r)
+  k <- max_dist(x)
   D <- k / n
 
   method <-
-    if ((r * k)^r < 1e4) "Exact"
+    if (isTRUE(exact)) "Exact"
+    else if (!isFALSE(exact) && (r * k)^r < 1e4) "Exact"
     else if (simulate.p.value) "Monte-Carlo"
     else "Approximate"
   if (method == "Approximate" && n < 10) warning("Approximate p-value may be innaccurate for small sample sizes")
@@ -57,10 +73,11 @@ ks.rsample.default <- function(
 
   structure(
     list(
-      statistic = D,
+      statistic = c(D = D),
       p.value = P,
       method = paste(method, "r-sample Kolmogorov-Smirnov test"),
-      data.name = data_name
+      data.name = data_name,
+      exact = (method == "Exact")
     ),
     class = c("ks.rsample", "ks.test", "htest")
   )
@@ -70,7 +87,7 @@ max_dist <- function(x) {
   stopifnot(is.list(x))
   stopifnot(all(vapply(x, is.numeric, logical(1L))))
   r <- length(x)
-  n <- vapply(x, length, integer(1L)) |> unique(N)
+  n <- vapply(x, length, integer(1L)) |> unique()
   stopifnot(length(n) == 1L)
 
   samp_nums <- rep(1L:r, each = n) |> unlist()
@@ -119,13 +136,15 @@ p_rks_sim <- function(r, n, k, B) {
   nge <- vapply(1:B, \(i)
     max_dist_tight(sample(samp_nums, N), r) >= k,
   logical(1)) |> sum()
-  (nge + 1) / (N + 1)
+  (nge + 1) / (B + 1)
 }
 
 p_rks_approx <- function(r, n, k) {
   diffs <- {mat <- outer(1:r, 1:r, `-`); mat[lower.tri(mat)]}
-  factorial(n)^r / factorial(r * n) *
-    2 ^ (r * (r - 1)) / (r * k)^(r - 1) *
-    (sin(pi / k) / sin(pi / (r * k)))^(r * n) *
-    prod(sin(pi * diffs / r)^2)
+  exp(
+    lgamma(n + 1)*r - lgamma(r * n + 1) +
+    (r * (r - 1)) * log(2) - (r - 1) * log(r * k) +
+    (r * n) * log(sin(pi / k) / sin(pi / (r * k))) +
+    sum(2 * log(sin(pi * diffs / r)))
+  )
 }
