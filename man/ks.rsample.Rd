@@ -3,36 +3,60 @@
 \name{ks.rsample}
 \alias{ks.rsample}
 \alias{ks.rsample.default}
+\alias{ks.rsample.formula}
 \title{Kolmogorov-Smirnov Tests for Two or More Equally-Sized Samples}
 \usage{
 ks.rsample(x, ...)
 
 \method{ks.rsample}{default}(x, exact = NULL, simulate.p.value = FALSE, B = 2000, ...)
+
+\method{ks.rsample}{formula}(
+  formula,
+  data,
+  exact = NULL,
+  simulate.p.value = FALSE,
+  B = 2000,
+  ...
+)
 }
 \arguments{
 \item{x}{a list of numeric vectors, each containing the data values for one
-sample; or a matrix, with each column containing the data values for one sample.
-Each sample must be the same size and must not contain NAs.}
+sample; or a matrix, with each column containing the data values for one
+sample. Each sample must be the same size and must not contain NAs.}
 
 \item{...}{further arguments for methods}
 
 \item{exact}{logical; if \code{TRUE}, or if \code{NULL} and \code{(r * D * n) ^ r < 1e4},
-then an exact p-value is computed; otherwise, an inexact p-value is computed
-according to the setting of \code{simulate.p.value}. (\code{r} is the number of samples,
-\code{D} is the test statistic, and \code{n} is the size of each sample)}
+then an exact p-value is computed; otherwise, an inexact p-value is
+computed according to the setting of \code{simulate.p.value}. (\code{r} is the number
+of samples, \code{D} is the test statistic, and \code{n} is the size of each sample)}
 
 \item{simulate.p.value}{logical; ignored in an exact p-value is computed. If
-\code{TRUE}, the p-value is estimated using Monte Carlo simulation, and if \code{FALSE},
-using the approximation from Böhm and Hornik (2011). \code{FALSE} is recommended
-except for small sample sizes, as the approximation is fairly good
-at least down to sample
-sizes of about 10.}
+\code{TRUE}, the p-value is estimated using Monte Carlo simulation, and if
+\code{FALSE}, using the approximation from Böhm and Hornik (2011). \code{FALSE} is
+recommended except for small sample sizes, as the approximation is fairly
+good at least down to sample sizes of about 10.}
 
 \item{B}{integer; number of trials for the Monte Carlo p-value estimation}
+
+\item{formula}{a formula, where the left-hand side is a numeric variable in
+\code{data} and the right-hand side contains a single term whose unique values
+define the groups for the test. The LHS must not contain any missing
+values, and the RHS must define groups of equal size. If the RHS is an
+interaction term, the unique interactions are used to determine groups.
+Parsed using \code{\link[=model.frame]{model.frame()}}.}
+
+\item{data}{an optional data frame (or similar; see \code{\link[=model.frame]{model.frame()}})
+containing variables used in \code{formula}.}
 }
 \value{
 An object of class "ks.rsample".
 }
 \description{
 Kolmogorov-Smirnov Tests for Two or More Equally-Sized Samples
+}
+\examples{
+# using a list as input:
+x <- list(rnorm(100, sd = 1), rnorm(100, sd = 2), rnorm(100, sd = 3))
+ks.rsample(x)
 }
