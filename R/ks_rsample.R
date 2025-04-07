@@ -43,15 +43,11 @@ ks.rsample.default <- function(
 ) {
   data_name <- (\(data_name = NULL, ...) data_name)(...)
   if (is.null(data_name)) data_name <- deparse1(substitute(x))
+
   # input validation
-  if (is.list(x)) {
-    if (length(x) < 2) stop(sprintf("'x' has %d elements, but requires at least 2", length(x)), call. = FALSE)
-    if (!all(vapply(x, is.numeric, logical(1)))) stop("All elements of 'x' must be numeric", call. = FALSE)
-  } else if (is.matrix(x)) {
-    if (!is.numeric(x)) stop(sprintf("'x' must be numeric, not %d", typeof(x)), call. = FALSE)
-    if (is.matrix(x) & ncol(x) < 2) stop(sprintf("'x' has %d columns, but requires at least 2", ncol(x)), call. = FALSE)
-    x <- x |> apply(2, identity, simplify = FALSE)
-  } else stop(sprintf("'x' must be a list or matrix, not a %s", typeof(x)), call. = FALSE)
+  if (!is.list(x)) stop(sprintf("'x' must be a list, not %s", typeof(x)), call. = FALSE)
+  if (length(x) < 2) stop(sprintf("'x' has %d elements, but requires at least 2", length(x)), call. = FALSE)
+  if (!all(vapply(x, is.numeric, logical(1)))) stop("All elements of 'x' must be numeric", call. = FALSE)
   if (any(is.na(unlist(x)))) stop("'x' contains NA values", call. = FALSE)
 
   r <- length(x)
@@ -86,6 +82,19 @@ ks.rsample.default <- function(
     ),
     class = c("ks.rsample", "ks.test", "htest")
   )
+}
+
+#' @rdname ks.rsample
+#' @exportS3Method multiks::ks.rsample matrix
+ks.rsample.matrix <- function(
+  x,
+  exact = NULL, simulate.p.value = FALSE, B = 2e3,
+  ...
+) {
+  if (!is.numeric(x)) stop(sprintf("'x' must be numeric, not %s", typeof(x)), call. = FALSE)
+  if (is.matrix(x) & ncol(x) < 2) stop(sprintf("'x' has %d columns, but requires at least 2", ncol(x)), call. = FALSE)
+  x <- x |> apply(2, identity, simplify = FALSE)
+  NextMethod(x = x)
 }
 
 #' @rdname ks.rsample
