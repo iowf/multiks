@@ -21,7 +21,7 @@
 #'
 #' @examples
 #' # using a list as input:
-#' x <- list(runif(100, 0), runif(100, 0.5), rnorm(100, 1))
+#' x <- list(rnorm(100, sd = 1), rnorm(100, sd = 2), rnorm(100, sd = 3))
 #' ks.rsample(x)
 ks.rsample <- function(x, ...) {
   UseMethod("ks.rsample")
@@ -37,7 +37,6 @@ ks.rsample.default <- function(
   ...
 ) {
   data_name <- deparse1(substitute(x))
-  browser()
   # input validation
   if (is.list(x)) {
     if (length(x) < 2) stop(sprintf("'x' has %d elements, but requires at least 2", length(x)))
@@ -141,7 +140,7 @@ p_rks_sim <- function(r, n, k, B) {
 
 p_rks_approx <- function(r, n, k) {
   diffs <- {mat <- outer(1:r, 1:r, `-`); mat[lower.tri(mat)]}
-  exp(
+  1 - exp(
     lgamma(n + 1)*r - lgamma(r * n + 1) +
     (r * (r - 1)) * log(2) - (r - 1) * log(r * k) +
     (r * n) * log(sin(pi / k) / sin(pi / (r * k))) +
