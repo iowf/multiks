@@ -1,3 +1,6 @@
+# Interfaces ===================================================================
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 #' Kolmogorov-Smirnov Tests for Two or More Equally-Sized Samples
 #'
 #' @param x a list of numeric vectors, each containing the data values for one
@@ -6,9 +9,7 @@
 #' @param formula a formula, where the left-hand side is a numeric variable in
 #'   `data` and the right-hand side contains a single term whose unique values
 #'   define the groups for the test. The LHS must not contain any missing
-#'   values, and the RHS must define groups of equal size. If the RHS is an
-#'   interaction term, the unique interactions are used to determine groups.
-#'   Parsed using [model.frame()].
+#'   [model.frame()].
 #' @param data an optional data frame (or similar; see [model.frame()])
 #'   containing variables used in `formula`.
 #' @param exact logical; if `TRUE`, or if `NULL` and `(r * D * n) ^ r < 1e4`,
@@ -24,12 +25,21 @@
 #' @param ... further arguments for methods
 #'
 #' @return An object of class "ks.rsample".
+#'
+#' @details For the purpose of calculating the test statistic, `model.formula()`
+#'   orders the groups by calling [order()] on the values of the grouping
+#'   variables. If the right-hand side of the formula is an interaction term,
+#'   each unique level of the interaction is between those variables is taken
+#'   to be one group.
+#'
 #' @export
 #'
 #' @examples
-#' # using a list as input:
 #' x <- list(rnorm(100, sd = 1), rnorm(100, sd = 2), rnorm(100, sd = 3))
 #' ks.rsample(x)
+#'
+#' # using a formula and data frame:
+#' ks.rsample(Sepal.Length ~ Species, data = iris)
 ks.rsample <- function(x, ...) {
   UseMethod("ks.rsample")
 }
@@ -41,7 +51,9 @@ ks.rsample.default <- function(
   exact = NULL, simulate.p.value = FALSE, B = 2e3,
   ...
 ) {
-  data_name <- (\(data_name = NULL, ...) data_name)(...)
+  # browser()
+
+  data_name <- switch(match("data_name", ...names()), ...)
   if (is.null(data_name)) data_name <- deparse1(substitute(x))
 
   # input validation
@@ -66,7 +78,7 @@ ks.rsample.default <- function(
     else "Approximate"
   if (method == "Approximate" && n < 10) warning("Approximate p-value may be innaccurate for small sample sizes")
 
-  P <- switch(method,
+  P <- 1 - switch(method,
     "Exact" = p_rks_exact(r, n, k),
     "Monte-Carlo" = p_rks_sim(r, n, k, B),
     "Approximate" = p_rks_approx(r, n, k),
@@ -94,7 +106,7 @@ ks.rsample.matrix <- function(
   if (!is.numeric(x)) stop(sprintf("'x' must be numeric, not %s", typeof(x)), call. = FALSE)
   if (is.matrix(x) & ncol(x) < 2) stop(sprintf("'x' has %d columns, but requires at least 2", ncol(x)), call. = FALSE)
   x <- x |> apply(2, identity, simplify = FALSE)
-  NextMethod(x = x)
+  NextMethod(x = x, ...)
 }
 
 #' @rdname ks.rsample
@@ -104,6 +116,7 @@ ks.rsample.formula <- function(
   exact = NULL, simulate.p.value = FALSE, B = 2e3,
   ...
 ){
+  # browser()
   mframe <- stats::model.frame(formula, data = data)
   mterms <- attributes(stats::terms(mframe))
   if (ncol(mterms$factors) != 1) stop(sprintf("'formula' must contain 1 term on RHS, not %d", ncol(mterms$facotrs)), call. = FALSE)
@@ -117,6 +130,12 @@ ks.rsample.formula <- function(
   NextMethod(x = x, data_name = data_name, ...)
 }
 
+# Auxiliary functions ==========================================================
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Calculate k, n times the maximum circular difference between ECDFs of the
+#   samples
+#   x   A list of equally-sized numeric vectors
 max_dist <- function(x) {
   stopifnot(is.list(x))
   stopifnot(all(vapply(x, is.numeric, logical(1L))))
@@ -128,6 +147,10 @@ max_dist <- function(x) {
   ascending <- samp_nums[order(unlist(x))]
   max_dist_tight(ascending, r)
 }
+# The workhorse of max_dist(); no overhead of validating and sorting x
+#   ascending   An integer vector; the sample indices (1, ..., r) of the
+#               observations in x sorted by the values of the observations in x
+#   r           The number of samples
 max_dist_tight <- function(ascending, r) {
   lattice <- outer(ascending, 1L:r, `==`) |> apply(2L, cumsum)
   circdiffs <- lapply(1L:r, \(i) lattice[, i] - lattice[, i %% r + 1L]) |>
@@ -135,6 +158,13 @@ max_dist_tight <- function(ascending, r) {
   max(circdiffs)
 }
 
+# Probabilities ================================================================
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Each function calculates the probability that n times the maximum circular
+#   difference between sample ECDFs is less than k, for r samples of size n
+
+# exact probability
 p_rks_exact <- function(r, n, k) {
   # each row is one combination of the summation indices v1, ..., vr
   vv <- expand.grid(
@@ -164,7 +194,9 @@ p_rks_exact <- function(r, n, k) {
   1 - Re(Pc)
 }
 
+# simulated probability (B is the number of iterations)
 p_rks_sim <- function(r, n, k, B) {
+  # browser()
   samp_nums <- rep(1L:r, each = n) |> unlist()
   N <- n * r
   nge <- vapply(1:B, \(i)
@@ -173,6 +205,7 @@ p_rks_sim <- function(r, n, k, B) {
   (nge + 1) / (B + 1)
 }
 
+# approximation of the exact probability
 p_rks_approx <- function(r, n, k) {
   diffs <- {mat <- outer(1:r, 1:r, `-`); mat[lower.tri(mat)]}
   1 - exp(
