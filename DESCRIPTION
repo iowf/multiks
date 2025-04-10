@@ -1,6 +1,6 @@
 Package: multiks
 Title: Kolmogorov-Smirnov Tests for Two or More Samples
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: 
     person("Ian", "Farm", , "ian.farm@maine.edu", role = c("aut", "cre"))
 Description: An implementation of Walter Böhm and Kurt Hornik's 
