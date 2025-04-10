@@ -28,18 +28,19 @@ sample; or a matrix, with each column containing the data values for one
 sample. Each sample must be the same size, and the data must not include
 missing vaues or ties.}
 
-\item{...}{further arguments for methods}
+\item{...}{further arguments passed to or from methods}
 
-\item{exact}{logical; if \code{TRUE}, or if \code{NULL} and \code{(r * D * n) ^ r < 1e4},
-then an exact p-value is computed; otherwise, an inexact p-value is
-computed according to the setting of \code{simulate.p.value}. (\code{r} is the number
-of samples, \code{D} is the test statistic, and \code{n} is the size of each sample)}
+\item{exact}{logical; whether to calculate the exact p-value. If \code{NULL}, the
+exact p-value is calculated if \code{(r * D * n) ^ r < 1e6} where \code{r} is the
+number of samples, \code{D} is the test statistic, and \code{n} is the size of one
+sample.}
 
-\item{simulate.p.value}{logical; ignored in an exact p-value is computed. If
-\code{TRUE}, the p-value is estimated using Monte Carlo simulation, and if
-\code{FALSE}, using the approximation from Böhm and Hornik (2011). \code{FALSE} is
-recommended except for small sample sizes, as the approximation is fairly
-good at least down to sample sizes of about 10.}
+\item{simulate.p.value}{logical; if an exact p-value is not calculated, then
+whether to estimate the p-value using Monte-Carlo simulation or using the
+approximation from Böhm and Hornik (2010). If \code{NULL}, the approximate
+formula is used if \code{D < 1/sqrt(n)} and \code{n >= 10}; otherwise, Monte-Carlo
+simulation is used since it is likely to have better accuracy in these
+cases.}
 
 \item{B}{integer; number of trials for the Monte Carlo p-value estimation}
 
@@ -59,22 +60,19 @@ An implementation of Walter Böhm and Kurt Hornik's (2010) two-or-more-sample
 Kolmogorov-Smirnov test
 }
 \details{
-For the purpose of calculating the test statistic, \code{model.formula()}
-orders the groups by calling \code{\link[=order]{order()}} on the values of the grouping
-variables. If the right-hand side of the formula is an interaction term,
-each unique level of the interaction is between those variables is taken to
-be one group.
+For the purpose of calculating the test statistic,
+\code{ks_rsample.formula()} orders the groups by calling \code{\link[=order]{order()}} on the values
+of the grouping variables. If the right-hand side of the formula is an
+interaction term, each unique level of the interaction is between those
+variables is taken to be one group.
 }
 \examples{
 x <- list(rnorm(100, sd = 1), rnorm(100, sd = 2), rnorm(100, sd = 3))
 ks_rsample(x)
-
-# using a formula and data frame:
-ks_rsample(Sepal.Length ~ Species, data = iris)
 }
 \references{
 Böhm, W., & Hornik, K. (2010). A Kolmogorov-Smirnov Test for r
 Samples. \emph{Research Report Series / Department of Statistics and
 Mathematics} 105.
-\href{https://doi.org/10.57938/2d4c243c-f18c-450e-8d1d-d0a69ff1fe52}{doi:10.57938/2d4c243c-f18c-450e-8d1d-d0a69ff1fe52}
+\href{https://doi.org/10.57938/2d4c243c-f18c-450e-8d1d-d0a69ff1fe52}{doi:10.57938/2d4c243c-f18c-450e-8d1d-d0a69ff1fe52}.
 }

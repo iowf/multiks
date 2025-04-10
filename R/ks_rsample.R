@@ -16,39 +16,37 @@
 #'   [model.frame()].
 #' @param data an optional data frame (or similar; see [model.frame()])
 #'   containing variables used in `formula`.
-#' @param exact logical; if `TRUE`, or if `NULL` and `(r * D * n) ^ r < 1e4`,
-#'   then an exact p-value is computed; otherwise, an inexact p-value is
-#'   computed according to the setting of `simulate.p.value`. (`r` is the number
-#'   of samples, `D` is the test statistic, and `n` is the size of each sample)
-#' @param simulate.p.value logical; ignored in an exact p-value is computed. If
-#'   `TRUE`, the p-value is estimated using Monte Carlo simulation, and if
-#'   `FALSE`, using the approximation from Böhm and Hornik (2011). `FALSE` is
-#'   recommended except for small sample sizes, as the approximation is fairly
-#'   good at least down to sample sizes of about 10.
+#' @param exact logical; whether to calculate the exact p-value. If `NULL`, the
+#'   exact p-value is calculated if `(r * D * n) ^ r < 1e6` where `r` is the
+#'   number of samples, `D` is the test statistic, and `n` is the size of one
+#'   sample.
+#' @param simulate.p.value logical; if an exact p-value is not calculated, then
+#'   whether to estimate the p-value using Monte-Carlo simulation or using the
+#'   approximation from Böhm and Hornik (2010). If `NULL`, the approximate
+#'   formula is used if `D < 1/sqrt(n)` and `n >= 10`; otherwise, Monte-Carlo
+#'   simulation is used since it is likely to have better accuracy in these
+#'   cases.
 #' @param B integer; number of trials for the Monte Carlo p-value estimation
-#' @param ... further arguments for methods
+#' @param ... further arguments passed to or from methods
 #'
 #' @return An object of class "ks_rsample".
 #'
-#' @details For the purpose of calculating the test statistic, `model.formula()`
-#'   orders the groups by calling [order()] on the values of the grouping
-#'   variables. If the right-hand side of the formula is an interaction term,
-#'   each unique level of the interaction is between those variables is taken to
-#'   be one group.
+#' @details For the purpose of calculating the test statistic,
+#'   `ks_rsample.formula()` orders the groups by calling [order()] on the values
+#'   of the grouping variables. If the right-hand side of the formula is an
+#'   interaction term, each unique level of the interaction is between those
+#'   variables is taken to be one group.
 #'
 #' @references Böhm, W., & Hornik, K. (2010). A Kolmogorov-Smirnov Test for r
 #'   Samples. \emph{Research Report Series / Department of Statistics and
 #'   Mathematics} 105.
-#'   \href{https://doi.org/10.57938/2d4c243c-f18c-450e-8d1d-d0a69ff1fe52}{doi:10.57938/2d4c243c-f18c-450e-8d1d-d0a69ff1fe52}
+#'   \href{https://doi.org/10.57938/2d4c243c-f18c-450e-8d1d-d0a69ff1fe52}{doi:10.57938/2d4c243c-f18c-450e-8d1d-d0a69ff1fe52}.
 #'
 #' @export
 #'
 #' @examples
 #' x <- list(rnorm(100, sd = 1), rnorm(100, sd = 2), rnorm(100, sd = 3))
 #' ks_rsample(x)
-#'
-#' # using a formula and data frame:
-#' ks_rsample(Sepal.Length ~ Species, data = iris)
 ks_rsample <- function(x, ...) {
   UseMethod("ks_rsample")
 }
